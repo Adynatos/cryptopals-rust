@@ -111,3 +111,17 @@ pub fn hamming_distance(first: &[u8], second: &[u8]) -> u32 {
         .map(|(a, b)| (a ^ b).count_ones())
         .sum()
 }
+
+pub fn pkcs7_pad(input: &[u8], block_length: u8) -> Vec<u8> {
+    let remainder = (input.len() % block_length as usize) as u8;
+    let needed_padding  = if remainder > 0 {
+        block_length - remainder
+    } else {
+        0
+    };
+
+    let mut result = input.to_vec();
+    let new_size: usize = (input.len() as u32 + needed_padding as u32) as usize;
+    result.resize(new_size, needed_padding as u8);
+    result
+}
