@@ -1,6 +1,3 @@
-extern crate base64;
-extern crate openssl;
-
 use openssl::symm::{decrypt, Cipher};
 use std::fs;
 use std::str;

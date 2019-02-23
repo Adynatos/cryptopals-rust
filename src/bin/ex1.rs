@@ -1,6 +1,3 @@
-extern crate base64;
-extern crate hex;
-
 use std::str;
 
 fn main() {
