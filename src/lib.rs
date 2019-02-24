@@ -1,4 +1,7 @@
 use std::f32;
+use openssl::symm::{encrypt, Cipher};
+use openssl::symm::{Mode, Crypter};
+
 
 pub fn fixed_xor(first: &[u8], second: &[u8]) -> Vec<u8> {
     first.iter().zip(second).map(|(&a, &b)| a ^ b).collect()
@@ -124,4 +127,34 @@ pub fn pkcs7_pad(input: &[u8], block_length: u8) -> Vec<u8> {
     let new_size: usize = (input.len() as u32 + needed_padding as u32) as usize;
     result.resize(new_size, needed_padding as u8);
     result
+}
+
+pub fn pkcs7_pad_remove(input: &mut Vec<u8>) {
+    let pad = *input.last().unwrap() as usize;
+
+    input.truncate(input.len() - pad);
+}
+
+pub fn aes_cbc_decrypt(ciphertext: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
+    let chunks: Vec<&[u8]> = ciphertext.chunks(16).collect();
+    let mut decrypter = Crypter::new(
+        Cipher::aes_128_ecb(),
+        Mode::Decrypt,
+        key,
+        None).unwrap();
+    decrypter.pad(false);
+
+    let mut decrypted = Vec::new();
+    let mut inside_iv = Vec::from(iv);
+    let mut count = 0;
+    for chunk in chunks {
+        let mut decrypted_block = vec![0; chunk.len() + 16];
+        count += decrypter.update(chunk, &mut decrypted_block).unwrap();
+        println!("{:?}", count);
+        decrypted.append(& mut fixed_xor(&decrypted_block, &inside_iv));
+        inside_iv = Vec::from(chunk);
+    }
+    pkcs7_pad_remove(&mut decrypted);
+
+    decrypted
 }
