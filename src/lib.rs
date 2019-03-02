@@ -1,5 +1,5 @@
 use std::f32;
-use openssl::symm::{encrypt, Cipher};
+use openssl::symm::{Cipher};
 use openssl::symm::{Mode, Crypter};
 
 
@@ -135,6 +135,28 @@ pub fn pkcs7_pad_remove(input: &mut Vec<u8>) {
     input.truncate(input.len() - pad);
 }
 
+pub fn aes_cbc_encrypt(plaintext: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
+    let padded = pkcs7_pad(&plaintext, 16);
+    let chunks: Vec<&[u8]> = padded.chunks(16).collect();
+    let mut encrypter = Crypter::new(
+        Cipher::aes_128_ecb(),
+        Mode::Encrypt,
+        key,
+        None).unwrap();
+    encrypter.pad(false);
+
+    let mut encrypted = vec![0u8; padded.len() + 16];
+    let mut inside_iv = Vec::from(iv);
+    let mut count = 0;
+    for chunk in chunks {
+        let xored = fixed_xor(chunk, &inside_iv);
+        count += encrypter.update(&xored, &mut encrypted[count..]).unwrap();
+        inside_iv = encrypted[count-16..count].to_vec();
+    }
+    encrypted.truncate(count);
+    encrypted
+}
+
 pub fn aes_cbc_decrypt(ciphertext: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
     let chunks: Vec<&[u8]> = ciphertext.chunks(16).collect();
     let mut decrypter = Crypter::new(
@@ -146,11 +168,10 @@ pub fn aes_cbc_decrypt(ciphertext: &[u8], key: &[u8], iv: &[u8]) -> Vec<u8> {
 
     let mut decrypted = Vec::new();
     let mut inside_iv = Vec::from(iv);
-    let mut count = 0;
+    let mut _count = 0; //TODO: make fixed_xor inplace and change it to use one vec for plaintext
     for chunk in chunks {
         let mut decrypted_block = vec![0; chunk.len() + 16];
-        count += decrypter.update(chunk, &mut decrypted_block).unwrap();
-        println!("{:?}", count);
+        _count += decrypter.update(chunk, &mut decrypted_block).unwrap();
         decrypted.append(& mut fixed_xor(&decrypted_block, &inside_iv));
         inside_iv = Vec::from(chunk);
     }

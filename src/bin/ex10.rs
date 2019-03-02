@@ -1,6 +1,6 @@
 use std::fs;
 use std::str;
-use cryptopals::aes_cbc_decrypt;
+use cryptopals::{aes_cbc_decrypt, aes_cbc_encrypt};
 
 fn main() {
     let encrypted = fs::read_to_string("resources/10.txt").expect("Failed to read input file");
@@ -13,5 +13,6 @@ fn main() {
     let decrypted = aes_cbc_decrypt(&encrypted, key.as_bytes(), iv.as_bytes());
     let msg = str::from_utf8(&decrypted).expect("Failed to parse decrypted text");
 
+    assert_eq!(aes_cbc_encrypt(msg.as_bytes(), key.as_bytes(), iv.as_bytes()),  encrypted);
     println!("{}", msg);
 }
